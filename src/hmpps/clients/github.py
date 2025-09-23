@@ -4,7 +4,9 @@ import json
 import yaml
 import jwt
 import re
+import sys
 from github import Auth, Github
+from github import GithubException
 from github.GithubException import UnknownObjectException
 from datetime import datetime, timedelta, timezone
 from hmpps.services.job_log_handling import (
@@ -22,7 +24,6 @@ class GithubSession:
     self.private_key = b64decode(params['app_private_key']).decode('ascii')
     self.app_id = params['app_id']
     self.app_installation_id = params['app_installation_id']
-
     self.auth()
     if self.session:
       try:
@@ -31,6 +32,14 @@ class GithubSession:
         log_info(f'Github API - rate limit: {rate_limit}')
       except Exception as e:
         log_critical('Unable to get Github Organisation.')
+    # Bootstrap repo parameter for bootstrapping
+    if github_bootstrap_repo := params.get('github_bootstrap_repo'):
+      self.bootstrap_repo = self.session.get_repo(f'{self.org}/{github_bootstrap_repo}')
+      log_debug(
+        f'Initialised GithubProject with bootstrap repo: {self.bootstrap_repo.name}'
+      )
+    else:
+      self.bootstrap_repo = None
 
   def auth(self):
     log_debug('Authenticating to Github')
@@ -280,3 +289,131 @@ class GithubSession:
         'vulnerabilities': sorted_vulnerabilities,
       }
     return summary
+
+  def create_update_pr(self, request):
+    branch_name = f'REQ_{request["id"]}_{request.get("github_repo")}'
+
+    # If the branch doesn't exist - create it
+    # This will obviously create a new PR even if one already exists
+    all_branches = self.bootstrap_repo.get_branches()
+    if branch_name not in [branch.name for branch in all_branches]:
+      log_info(f'Branch {branch_name} not found - creating')
+      self.bootstrap_repo.create_git_ref(
+        ref=f'refs/heads/{branch_name}',
+        sha=self.bootstrap_repo.get_branch('main').commit.sha,
+      )
+
+    request_json_file = f'{branch_name}.json'
+
+    # Populate the json file only with useful stuff
+    json_fields = [
+      'github_repo',
+      'repo_description',
+      'base_template',
+      'jira_project_keys',
+      'github_project_visibility',
+      'product',
+      'github_project_teams_write',
+      'github_projects_teams_admin',
+      'github_project_branch_protection_restricted_teams',
+      'prod_alerts_severity_label',
+      'nonprod_alerts_severity_label',
+      'slack_channel_nonprod_release_notify',
+      'slack_channel_prod_release_notify',
+      'slack_channel_security_scans_notify',
+      'requester_name',
+      'requester_email',
+      'requester_team',
+    ]
+
+    request_json = {key: request.get(key) for key in json_fields if key in request}
+
+    create_file = False
+    # Check if the project-request.json file exists and update it if it does
+    try:
+      json_file = self.bootstrap_repo.get_contents(
+        f'requests/{request_json_file}', ref=branch_name
+      )
+      if json_file and not isinstance(json_file, list):
+        self.bootstrap_repo.update_file(
+          json_file.path,
+          f'Updating {request_json_file} with details for {request.get("github_repo")}',
+          json.dumps(request_json, indent=2),
+          json_file.sha,
+          branch=branch_name,
+        )
+
+    except GithubException as e:
+      if e.status == 404:
+        # Need to create the project.json file if it's not there
+        create_file = True
+      else:
+        log_error(
+          f'Failed to update requests/{request_json_file} in {self.bootstrap_repo.name} - {e.data} - please fix this this and re-run'
+        )
+        sys.exit(1)
+
+    if create_file:
+      try:
+        log_debug(f'Creating file: {request_json_file}')
+        self.bootstrap_repo.create_file(
+          f'requests/{request_json_file}',
+          f'Creating requests/{request_json_file} with details for {request.get("github_repo")}',
+          json.dumps(request_json, indent=2),
+          branch=branch_name,
+        )
+      except GithubException as e:
+        log_error(
+          f'Failed to create requests/{request_json_file} in {self.bootstrap_repo.name} - {e.data} - please fix this this and re-run'
+        )
+        sys.exit(1)
+
+    github_pulls = self.bootstrap_repo.get_pulls(
+      state='open',
+      sort='created',
+      base='main',
+      head=f'{self.org}:{branch_name}',
+    )
+
+    log_debug(f'Current pulls for {branch_name}: {github_pulls.totalCount}')
+    if github_pulls.totalCount == 0:
+      # Create a new PR if one doesn't exist
+      log_info(f'Creating PR for {branch_name}')
+      pr = self.bootstrap_repo.create_pull(
+        title=f'Project request for {request.get("github_repo")}',
+        body=f'Project request raised for {request.get("github_repo")}',
+        head=branch_name,
+        base='main',
+      )
+      pr.enable_automerge('MERGE')
+      request['request_github_pr_number'] = pr.number
+      request['output_status'] = 'New'
+      request['request_github_pr_status'] = 'Raised'
+    else:
+      log_info(f'PR already exists for {branch_name}')
+      request['request_github_pr_number'] = github_pulls[0].number
+      request['output_status'] = 'Updated'
+      request['request_github_pr_status'] = 'Updated'
+
+    return request
+
+  def delete_old_workflows(self):
+    try:
+      if bootstrap_workflow := [
+        workflow
+        for workflow in self.bootstrap_repo.get_workflows()
+        if workflow.name == 'Bootstrap - poll for repo requests'
+      ]:
+        workflow_runs = bootstrap_workflow[0].get_runs()
+        run_qty = workflow_runs.totalCount
+        if run_qty > 12:
+          log_debug(
+            f'Workflow {bootstrap_workflow[0].name} has {run_qty} runs - cropping to 12'
+          )
+          for run in workflow_runs[12:]:
+            run.delete()
+
+    except GithubException as e:
+      log_warning(
+        f'Encountered an issue removing old workflow runs in {self.bootstrap_repo.name} - {e.data} - please fix this this and re-run'
+      )
