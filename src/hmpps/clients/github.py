@@ -5,6 +5,7 @@ import yaml
 import jwt
 import re
 import sys
+from time import sleep
 from github import Auth, Github
 from github import GithubException
 from github.GithubException import UnknownObjectException
@@ -44,8 +45,8 @@ class GithubSession:
   def auth(self):
     log_debug('Authenticating to Github')
     try:
-      auth = Auth.Token(self.get_access_token())
-      self.session = Github(auth=auth, pool_size=50)
+      self.token = Auth.Token(self.get_access_token())
+      self.session = Github(auth=self.token, pool_size=50)
       # Refresh the org object
       self.org = self.session.get_organization('ministryofjustice')
     except Exception as e:
@@ -417,3 +418,159 @@ class GithubSession:
       log_warning(
         f'Encountered an issue removing old workflow runs in {self.bootstrap_repo.name} - {e.data} - please fix this this and re-run'
       )
+
+  def create_repo(self, project_params):
+    def _repo_ready():
+      # poll for the repo to prevent race conditions
+      repo_ready = False
+      check_count = 0
+      log_debug('Checking to see if the repo is ready yet..')
+      while not repo_ready and check_count < 10:
+        sleep(5)
+        try:
+          log_debug(f'Attempt: {check_count}')
+          repo.edit(default_branch='main')
+          repo_ready = True
+        except Exception:
+          check_count += 1
+          return True
+
+      if not repo_ready:
+        log_error(
+          f'Repository {project_params["github_repo"]} not ready after 10 attempts - please check and re-run'
+        )
+        sys.exit(1)
+
+    if project_params['github_template_repo']:
+      # create repository from template
+      # Headers for the request
+      headers = {
+        'Authorization': f'token {self.token}',
+        'Accept': 'application/vnd.github.v3+json',
+      }
+
+      # Data for the request
+      data = {
+        'owner': project_params['github_org'],
+        'name': project_params['github_repo'],
+        'description': project_params['description'],
+      }
+
+      # Make the request to create a new repository from a template
+      response = requests.post(
+        f'https://api.github.com/repos/{project_params["github_org"]}/{project_params["github_template_repo"]}/generate',
+        headers=headers,
+        json=data,
+      )
+
+      if response.status_code == 201:
+        log_info(f'Repository {project_params["github_repo"]} created successfully.')
+      else:
+        log_error(
+          f'Failed to create repository: {response.status_code} - {response.text}'
+        )
+        sys.exit(1)
+
+      # Wait for the repo to sync
+      _repo_ready()
+
+      # load the repo details into the repo object
+      repo = self.session.get_repo(
+        f'{project_params["github_org"]}/{project_params["github_repo"]}'
+      )
+
+    else:
+      # create fresh new repository
+
+      headers = {
+        'Authorization': f'token {self.token}',
+        'Accept': 'application/vnd.github.v3+json',
+      }
+
+      # Data for the request
+      data = {
+        'name': project_params['github_repo'],
+        'description': project_params['description'],
+      }
+
+      # Make the request to create a new repository from a template
+      response = requests.post(
+        f'https://api.github.com/orgs/{project_params["github_org"]}/repos',
+        headers=headers,
+        json=data,
+      )
+
+      if response.status_code == 201:
+        log_info(f'Repository {project_params["github_repo"]} created successfully.')
+      else:
+        log_error(
+          f'Failed to create repository: {response.status_code} - {response.text}'
+        )
+        sys.exit(1)
+
+      # Wait for the repo to sync
+      _repo_ready()
+
+      # and populate it with a basic README.md
+      repo = self.session.get_repo(
+        f'{project_params["github_org"]}/{project_params["github_repo"]}'
+      )
+      try:
+        file_name = 'README.md'
+        file_contents = (
+          f'# {project_params["github_repo"]}\n{project_params["description"]}'
+        )
+        repo.create_file(file_name, 'commit', file_contents)
+      except GithubException as e:
+        log_error(
+          f'Failed to create Github README.md - {e.data} - please correct this and re-run'
+        )
+        sys.exit(1)
+
+  def add_repo_to_runner_group(self, repo_name, runner_group_name):
+    repo = self.org.get_repo(repo_name)
+    if not repo:
+      log_error(
+        f'Could not find repo {repo_name} - not trying to add it to the runner group'
+      )
+      return False
+    repo_id = repo.id
+
+    headers = {
+      'Authorization': f'token {self.token}',
+      'Accept': 'application/vnd.github.v3+json',
+    }
+    try:
+      r = requests.get(
+        f'https://api.github.com/orgs/{self.github_org}/actions/runner-groups',
+        headers=headers,
+      )
+      r.raise_for_status()
+      groups = r.json().get('runner_groups', [])
+      if runner_group := next(g for g in groups if g['name'] == runner_group_name):
+        runner_group_id = runner_group['id']
+      else:
+        log_error(
+          f'Runner group {runner_group_name} not found - not possible to add repository {repo_name} to runner group'
+        )
+        return False
+    except GithubException as e:
+      log_error(f'Unable to get a list of runner groups: {e}')
+      return False
+
+    try:
+      r = requests.put(
+        f'https://api.github.com/orgs/{self.org}/actions/runner-groups/{runner_group_id}/repositories/{repo_id}',
+        headers=headers,
+      )
+      r.raise_for_status()
+      log_info(
+        f'Repo {repo_name} added to runner group {runner_group_name} (id: {runner_group_id}).'
+      )
+    except GithubException as e:
+      log_error(
+        f'Unable to add repository {repo_name} to runner group {runner_group_name}: {e}'
+      )
+      return False
+
+    return True
