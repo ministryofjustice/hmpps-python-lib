@@ -99,10 +99,17 @@ Finally, once the PR has been merged, tag the release, and it will automatically
 
 ### Refreshing the version in other repositories
 
-If a tool is currently using the hmpps-python-lib library, updating is as simple as:
+If a tool is currently using the hmpps-python-lib library, updating is as simple as either editing the pyproject.toml file in the project's root directory
 
-uv upgrade https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.1/hmpps_python_lib-0.0.1-py3-none-any.whl
+```
+[tool.uv.sources]
+hmpps-python-lib = { url = "https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl" }
+```
 
+or you can do:
+```
+uv remove hmpps-python-lib
+uv add https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl
 
 
 ## Migrating to hmpps-python-lib
@@ -117,9 +124,19 @@ Migration comes in three parts:
 
 The shared library is imported with the top level `hmpps`. There have been some semantic changes to the names of the subcomponents to better represent their function. See the `docs` folder for the supported classes, models, functions and values for further guidance.
 
+You may find that you get Pylance errors because it can't locate the libraries referred to by the `pyproject.toml` file. This is likely to be because there's already a `.venv` file in place. 
+
+- delete the .venv directory and its contents
+- run `uv sync` - this will create a new one
+- if necessary, close VSCode and open it up again.
+
+This tends to sort the problem out.
+
 ### Removing local copies of the imports
 
 Once the libary is in use, tidy up the local filesystem. It may be that some functions within the same file (eg. utilities.py) need to remain, since they're specific to the particular script that's running. 
+
+If you've got Pylance working correctly, you should be able to delete the local files and quickly identify the bits you might have missed.
 
 ### Fine-tuning the pyproject.toml to remove unnecessary packages
 
@@ -136,7 +153,7 @@ Once the hmpps-python-lib library is in use, it may well be that libraries such 
   help: If you want to add the package regardless of the failed resolution, provide the `--frozen` flag to skip locking and syncing.
 ```
 
-...removing unnecessary includes is essential.
+...removing unnecessary dependencies is essential. It may, in fact, be that you don't need any additional dependencies, but others (for example )
 
 
 
