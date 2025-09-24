@@ -1,13 +1,7 @@
 import requests
 import yaml
 import json
-from hmpps.services.job_log_handling import (
-  log_debug,
-  log_error,
-  log_info,
-  log_critical,
-  log_level,
-)
+from hmpps.services.job_log_handling import log_debug, log_error, log_info
 
 
 class AlertmanagerData:

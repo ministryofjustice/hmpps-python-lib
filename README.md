@@ -1,3 +1,142 @@
 # hmpps-python-lib
 
-a set of python libraries for use in hmpps SRE projects (and maybe other places)
+A set of python libraries for use in hmpps SRE projects (and maybe other places)
+
+## Requirements
+
+### Local development
+You need to have [uv](https://docs.astral.sh/uv/) installed on your machine to manage Python libraries - it's a very handy tool which takes the pain away from managing `pyproject.toml` files and `.venv` by acting as a wrapper for Python.
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+or
+
+```
+brew install uv
+```
+
+## Using hmpps-python-lib in projects
+
+### Github Actions Workflows
+
+Any Github Action or Workflow running python will need the uv installation as well - that's as easy as swapping out the existing `actions/setup-python` section with `
+
+```
+  - name: Install uv & set Python
+    uses: astral-sh/setup-uv@v6
+    with:
+      python-version: '3.13'
+      enable-cache: true
+      cache-dependency-glob: 'uv.lock'   # cache invalidates on lockfile change
+```
+
+and then replacing any invocation of `python ...` with `uv run python ...` eg:
+
+```
+    run: uv run python scripts/actions_check_sc_requests.py >> "$GITHUB_OUTPUT"
+```
+
+### Docker Images
+
+In general, an image like `python:3.13-slim` will be used.
+It's necessary to run uv within the Docker container, so the easiest way to achieve this is to use the pre-packaged uv image, so
+`ghcr.io/astral-sh/uv:python3.13-alpine` or `ghcr.io/astral-sh/uv:python3.13-bookworm-slim`
+
+If the python application has been developed locally (see [migration](#migrating-to-hmpps-python-lib) below), a `pyproject.toml` file will already exist, in which case it's simply a case of adding theselines:
+
+```
+COPY pyproject.toml .
+RUN uv pip install --user
+```
+
+The entrypoint will also need to be updated, from (for example):
+
+```
+CMD [ "python", "-u", "github_discovery.py" ]
+```
+
+to:
+```
+CMD [ "uv" "run"  "python", "-u", "github_discovery.py" ]
+```
+
+## Cloning this repository
+
+If you're cloning this repository for the first time, you'll need to run
+
+```
+uv sync
+```
+to ensure your local environment matches the requirements of the project. 
+In fact, every time you pull down or refresh the project, it's worth running `uv sync` to make sure it's up-to-date with the latest version.
+
+
+## Updating the library
+
+If you're making changes to the library, here's what needs to happen for it to be available:
+
+### New imported libraries 
+These are libraries required by scripts, which would normally be added to requirements.txt
+
+```
+uv add LIBRARY_NAME==version.number
+```
+
+This updates uv.lock, so it's ready to be pushed.
+
+### Updating the documentation
+
+If a new function or component is available, please update files within the `docs` folder with the appropriate information.
+
+
+### Tagging the new version
+
+Next, it's a case of changing the `version` value in `pyproject.toml` so it matches the forthcoming tag - just for consistency.
+
+Finally, once the PR has been merged, tag the release, and it will automatically create a release asset file that corresponds with the tag.
+
+### Refreshing the version in other repositories
+
+If a tool is currently using the hmpps-python-lib library, updating is as simple as:
+
+uv upgrade https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.1/hmpps_python_lib-0.0.1-py3-none-any.whl
+
+
+
+## Migrating to hmpps-python-lib
+
+Migration comes in three parts:
+
+- Rewriting the scripts so they use the shared library rather than the local imports
+- Removing local copies of the imports
+- Fine-tuning the pyproject.toml to remove unnecessary packages
+
+### Rewriting scripts
+
+The shared library is imported with the top level `hmpps`. There have been some semantic changes to the names of the subcomponents to better represent their function. See the `docs` folder for the supported classes, models, functions and values for further guidance.
+
+### Removing local copies of the imports
+
+Once the libary is in use, tidy up the local filesystem. It may be that some functions within the same file (eg. utilities.py) need to remain, since they're specific to the particular script that's running. 
+
+### Fine-tuning the pyproject.toml to remove unnecessary packages
+
+Once the hmpps-python-lib library is in use, it may well be that libraries such as `requests`, `slack-sdk` or `pygithub` are no longer required. To avoid version clases, and errors like this:
+
+```
+  × No solution found when resolving dependencies for split (markers: python_full_version >= '3.14' and platform_python_implementation != 'PyPy'):
+  ╰─▶ Because only hmpps-python-lib==0.0.1 is available and hmpps-python-lib==0.0.1 depends on requests>=2.32.5, we can conclude that all versions of hmpps-python-lib depend on
+      requests>=2.32.5.
+      And because your project depends on hmpps-python-lib and requests==2.32.4, we can conclude that your project's requirements are unsatisfiable.
+
+      hint: While the active Python version is 3.13, the resolution failed for other Python versions supported by your project. Consider limiting your project's supported Python versions
+      using `requires-python`.
+  help: If you want to add the package regardless of the failed resolution, provide the `--frozen` flag to skip locking and syncing.
+```
+
+...removing unnecessary includes is essential.
+
+
+

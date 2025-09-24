@@ -22,9 +22,25 @@ from hmpps.values import actions_allowlist
 
 class GithubSession:
   def __init__(self, params):
-    self.private_key = b64decode(params['app_private_key']).decode('ascii')
-    self.app_id = params['app_id']
-    self.app_installation_id = params['app_installation_id']
+    # Create a session with a private key
+    if params.get('app_private_key'):
+      self.private_key = b64decode(params.get('app_private_key')).decode('ascii')
+      self.app_id = params.get('app_id')
+      self.app_installation_id = params['app_installation_id']
+      try:
+        self.token = Auth.Token(self.get_access_token())
+      except GithubException as g:
+        log_error(f'Unable to get a Github access token - {g}')
+        sys.exit(1)
+    # Github access token passed in
+    elif params.get('github_access_token'):
+      self.token = params.get('github_access_token')
+    # Neither - give up
+    else:
+      log_error(
+        'Need app_private_key or github_access_token to initiate a Github Session'
+      )
+      sys.exit(1)
     self.auth()
     if self.session:
       try:
@@ -45,7 +61,6 @@ class GithubSession:
   def auth(self):
     log_debug('Authenticating to Github')
     try:
-      self.token = Auth.Token(self.get_access_token())
       self.session = Github(auth=self.token, pool_size=50)
       # Refresh the org object
       self.org = self.session.get_organization('ministryofjustice')
