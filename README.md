@@ -153,7 +153,23 @@ Once the hmpps-python-lib library is in use, it may well be that libraries such 
   help: If you want to add the package regardless of the failed resolution, provide the `--frozen` flag to skip locking and syncing.
 ```
 
-...removing unnecessary dependencies is essential. It may, in fact, be that you don't need any additional dependencies, but others (for example )
+...removing unnecessary dependencies is essential. It may, in fact, be that you don't need any additional dependencies, but others (for example dockerfile_parse) may  be specific for your project. Here, for example, is hmpps-github-discovery's pyrpoject.yaml:
+
+```
+[project]
+name = "hmpps-github-discovery"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dockerfile-parse==2.0.1",
+    "hmpps-python-lib"
+]
+
+[tool.uv.sources]
+hmpps-python-lib = { url = "https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl" }
+```
 
 
 
