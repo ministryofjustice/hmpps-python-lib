@@ -71,7 +71,7 @@ class RepositoryInfoFactory:
       )
     except Exception as e:
       default_branch_protection = None
-      log_error('Error getting default branch protection: %s', e)
+      log_error(f'Error getting default branch protection: {e}')
 
     return RepositoryInfo(
       basic=basic_info,
