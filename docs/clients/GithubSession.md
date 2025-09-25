@@ -64,13 +64,6 @@ Purpose: Read a file and return plaintext contents.
 Inputs: same as above.
 Outputs: string contents or None on error/404.
 
-
-*find_uses(self, data, key='uses', result=None)*
-Purpose: Recursively scan YAML/JSON structures for keys named (by default) uses, returning non-whitelisted action references.
-Inputs: data (dict/list/primitive), optional key and result.
-Outputs: list of action strings that are not matched by actions_allowlist.
-Notes: uses re.match against allowlist patterns.
-
 *get_actions(self, repo)*
 Purpose: Walk the repository .github directory, find workflow .yml files, and collect non-whitelisted uses entries from them.
 Inputs: repo (PyGitHub repo)

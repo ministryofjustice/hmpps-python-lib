@@ -17,7 +17,6 @@ from hmpps.services.job_log_handling import (
   log_info,
   log_critical,
 )
-from hmpps.values import actions_allowlist
 
 
 class GithubSession:
@@ -151,52 +150,6 @@ class GithubSession:
     except Exception as e:
       log_error(f'Error getting contents from file ({path}): {e}')
       return None
-
-  def find_uses(self, data, key='uses', result=None):
-    if result is None:
-      result = []
-
-    def is_whitelisted(action):
-      return any(re.match(pattern, action) for pattern in actions_allowlist)
-
-    if isinstance(data, dict):
-      for k, v in data.items():
-        if k == key:
-          log_debug(f'found key {k} | value:{v}')
-          if not is_whitelisted(v):
-            log_debug(f'action {v} is not whitelisted - adding to the list')
-            result.append(v)
-        else:
-          self.find_uses(v, key, result)
-    elif isinstance(data, list):
-      for item in data:
-        self.find_uses(item, key, result)
-
-    return result
-
-  def get_actions(self, repo):
-    github_actions = []
-    try:
-      github_dir = repo.get_contents(
-        '.github', ref=repo.get_branch(repo.default_branch).commit.sha
-      )
-      while github_dir:
-        actions = {}
-        file = github_dir.pop(0)
-        if file.type == 'dir':
-          github_dir.extend(repo.get_contents(file.path))
-        else:
-          if file.name.endswith('.yml'):
-            log_debug(f'File found: {file.path}')
-            action_filename = file.path
-            actions = self.get_file_yaml(repo, action_filename)
-            if uses := self.find_uses(actions):
-              action_refs = {'filename': action_filename, 'actions': uses}
-              github_actions.append(action_refs)
-              log_debug(f'Actions: {action_refs}')
-    except Exception as e:
-      log_warning(f'Unable to load the .github folder for {repo.name}: {e}')
-    return github_actions
 
   def api_get(self, api):
     response_json = {}
