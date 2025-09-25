@@ -17,6 +17,14 @@ or
 brew install uv
 ```
 
+Because `uv` creates a virtual environment (`.venv`) when `uv sync` is run, it's possible to activate this environment using
+
+```
+source .venv/bin/activate
+```
+and `python your_script.py` can be used as usual.
+
+
 ## Using hmpps-python-lib in projects
 
 ### Github Actions Workflows
@@ -40,11 +48,13 @@ and then replacing any invocation of `python ...` with `uv run python ...` eg:
 
 ### Docker Images
 
-In general, an image like `python:3.13-slim` will be used.
-It's necessary to run uv within the Docker container, so the easiest way to achieve this is to use the pre-packaged uv image, so
+In general, an image like `python:3.13-slim` will be used for existing Python scripts
+
+The most convenient way to support uv within a Docker container is to use the pre-packaged uv image, so:
+
 `ghcr.io/astral-sh/uv:python3.13-alpine` or `ghcr.io/astral-sh/uv:python3.13-bookworm-slim`
 
-If the python application has been developed locally (see [migration](#migrating-to-hmpps-python-lib) below), a `pyproject.toml` file will already exist, in which case it's simply a case of adding theselines:
+If the python application has been developed locally (see [migration](#migrating-to-hmpps-python-lib) below), a `pyproject.toml` file will already exist, in which case it's simply a case of adding these lines to the Dockerfile:
 
 ```
 COPY pyproject.toml .
@@ -82,6 +92,7 @@ These are libraries required by scripts, which would normally be added to requir
 
 ```
 uv add LIBRARY_NAME==version.number
+uv sync
 ```
 
 This updates uv.lock, so it's ready to be pushed.
@@ -110,15 +121,42 @@ or you can do:
 ```
 uv remove hmpps-python-lib
 uv add https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl
+```
 
 
 ## Migrating to hmpps-python-lib
 
-Migration comes in three parts:
+Migration comes in four parts:
 
+- Initiating the uv project
 - Rewriting the scripts so they use the shared library rather than the local imports
 - Removing local copies of the imports
 - Fine-tuning the pyproject.toml to remove unnecessary packages
+
+### Initiating the uv project
+
+First, a `pyproject.toml` is needed. Run:
+```
+uv init
+```
+
+Then, add the libraries currently mentioned in `requirements.txt` into the project:
+```
+uv add -r requirements.txt
+```
+
+Add the latest version of the `hmpps-python-lib` library. This can be found in in the [releases section of the hmpps-python-lib repository](https://github.com/ministryofjustice/hmpps-python-lib/releases) - right click the corresponding wheel file (eg `hmpps_python_lib-0.0.3-py3-none-any.whl`) and Copy Link Address. 
+
+then run (for example):
+```
+uv add https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.3/hmpps_python_lib-0.0.3-py3-none-any.whl
+```
+
+Finally, run
+```
+uv sync
+```
+
 
 ### Rewriting scripts
 
@@ -140,7 +178,7 @@ If you've got Pylance working correctly, you should be able to delete the local 
 
 ### Fine-tuning the pyproject.toml to remove unnecessary packages
 
-Once the hmpps-python-lib library is in use, it may well be that libraries such as `requests`, `slack-sdk` or `pygithub` are no longer required. To avoid version clases, and errors like this:
+Once the hmpps-python-lib library is in use, it may well be that libraries such as `requests`, `slack-sdk` or `pygithub` that may have been picked up and placed within the `pyproject.toml` when are no longer required. To avoid version clases, and errors like this:
 
 ```
   × No solution found when resolving dependencies for split (markers: python_full_version >= '3.14' and platform_python_implementation != 'PyPy'):
@@ -170,6 +208,3 @@ dependencies = [
 [tool.uv.sources]
 hmpps-python-lib = { url = "https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl" }
 ```
-
-
-
