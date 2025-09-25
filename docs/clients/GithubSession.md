@@ -1,54 +1,22 @@
-# Clients
-
-This contains classes that enable client connections to other services
-
 ## Classes
 
-### hmpps.CircleCI
-Initiates a CircleCI session.
+## hmpps.GithubSession
 
-
-**Example**
-```
-from hmpps import CircleCI
-
-cc_params = {
-  'url': os.getenv(
-    'CIRCLECI_API_ENDPOINT',
-    'https://circleci.com/api/v1.1/project/gh/ministryofjustice/',
-  ),
-  'token': os.getenv('CIRCLECI_TOKEN'),
-}
-
-cc=CircleCI(cc_params)
-```
-
-### Functions
-
-*test_connection*
-Tests the connection to CircleCI - returns True if OK
-
-*get_trivy_scan_json_data*
-Downloads the latest Trivy scan from CircleCI
-
-*get_circleci_orb_version*
-Extracts the version of hmpps-circlec-orb from a dictionary representing the CircleCI config
+This establishes sessions with Github as part of an org. It also includes functions to read and update specific configurations of a Github repository or carry out other custom processes.
 
 
 **Migration**
 Replace
 ```
-from classes import CircleCI
+from classes import GithubSession
 ```
 
 with
 
 ```
-from hmpps import CircleCI
+from hmpps import GithubSession
 ```
 
-
-## hmpps.GithubSession
 
 ### Functions
 

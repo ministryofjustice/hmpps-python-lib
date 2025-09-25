@@ -278,12 +278,13 @@ class ServiceCatalogue:
 
   def get_component_env_id(self, component, env):
     env_id = None
-    for env in component.get('envs', {}):
-      if env.get['name'] == env:
-        env_id = env['documentId']
+    for env_obj in component.get('envs', []):
+      if env_obj.get('name') == env:
+        env_id = env_obj.get('documentId')
         log_debug(
           f'Found existing environment ID for {env} in component {component.get("name")}: {env_id}'
         )
+        break
     if not env_id:
       log_debug(
         f'No existing environment ID found for {env} in component {component.get("name")}'
