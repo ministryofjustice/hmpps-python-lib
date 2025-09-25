@@ -45,10 +45,10 @@ class GithubSession:
     if self.session:
       try:
         rate_limit = self.session.get_rate_limit()
-        self.core_rate_limit = rate_limit.core
+        self.core_rate_limit = rate_limit.resources.core
         log_info(f'Github API - rate limit: {rate_limit}')
       except Exception as e:
-        log_critical('Unable to get Github Organisation.')
+        log_critical(f'Unable to get github rate limit - {e}')
     # Bootstrap repo parameter for bootstrapping
     if github_bootstrap_repo := params.get('github_bootstrap_repo'):
       self.bootstrap_repo = self.session.get_repo(f'{self.org}/{github_bootstrap_repo}')
@@ -62,10 +62,13 @@ class GithubSession:
     log_debug('Authenticating to Github')
     try:
       self.session = Github(auth=self.token, pool_size=50)
-      # Refresh the org object
-      self.org = self.session.get_organization('ministryofjustice')
     except Exception as e:
       log_critical(f'Unable to connect to the github API {e}')
+      # Refresh the org object
+    try:
+      self.org = self.session.get_organization('ministryofjustice')
+    except Exception as e:
+      log_critical(f'Unable to get the Github organisation {e}')
 
   def get_access_token(self):
     log_debug('Using private key to get access token')
@@ -87,7 +90,7 @@ class GithubSession:
     # Test auth and connection to github
     try:
       rate_limit = self.session.get_rate_limit()
-      self.core_rate_limit = rate_limit.core
+      self.core_rate_limit = rate_limit.resources.core
       log_info(f'Github API: {rate_limit}')
       # test fetching organisation name
       self.org = self.session.get_organization('ministryofjustice')
@@ -100,7 +103,7 @@ class GithubSession:
   def get_rate_limit(self):
     try:
       if self.session:
-        return self.session.get_rate_limit().core
+        return self.session.get_rate_limit().resources.core
     except Exception as e:
       log_error(f'Error getting rate limit: {e}')
       return None
