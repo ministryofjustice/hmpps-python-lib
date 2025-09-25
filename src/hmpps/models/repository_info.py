@@ -5,11 +5,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Optional
 from hmpps.services.job_log_handling import (
-  log_debug,
   log_error,
-  log_info,
-  log_critical,
-  log_warning,
 )
 
 
