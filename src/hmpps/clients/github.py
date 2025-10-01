@@ -513,7 +513,7 @@ class GithubSession:
     }
     try:
       r = requests.get(
-        f'https://api.github.com/orgs/{self.org.name}/actions/runner-groups',
+        f'https://api.github.com/orgs/{self.org.login}/actions/runner-groups',
         headers=headers,
       )
       r.raise_for_status()
@@ -531,7 +531,7 @@ class GithubSession:
 
     try:
       r = requests.put(
-        f'https://api.github.com/orgs/{self.org.name}/actions/runner-groups/{runner_group_id}/repositories/{repo_id}',
+        f'https://api.github.com/orgs/{self.org.login}/actions/runner-groups/{runner_group_id}/repositories/{repo_id}',
         headers=headers,
       )
       r.raise_for_status()
