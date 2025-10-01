@@ -33,6 +33,7 @@ class GithubSession:
     # Github access token passed in
     elif params.get('github_access_token'):
       self.token = Auth.Token(params.get('github_access_token'))
+      self.rest_token = params.get('github_access_token')
     # Neither - give up
     else:
       log_error(
@@ -415,7 +416,7 @@ class GithubSession:
       # create repository from template
       # Headers for the request
       headers = {
-        'Authorization': f'token {self.token}',
+        'Authorization': f'token {self.rest_token}',
         'Accept': 'application/vnd.github.v3+json',
       }
 
@@ -453,7 +454,7 @@ class GithubSession:
       # create fresh new repository
 
       headers = {
-        'Authorization': f'token {self.token}',
+        'Authorization': f'token {self.rest_token}',
         'Accept': 'application/vnd.github.v3+json',
       }
 
@@ -507,7 +508,7 @@ class GithubSession:
     repo_id = repo.id
 
     headers = {
-      'Authorization': f'token {self.token}',
+      'Authorization': f'token {self.rest_token}',
       'Accept': 'application/vnd.github.v3+json',
     }
     try:
