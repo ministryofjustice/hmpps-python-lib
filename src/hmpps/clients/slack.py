@@ -15,7 +15,7 @@ class Slack:
     self.alert_channel = slack_params.get('alert_channel', '')
 
     # Test auth and connection to Slack
-    log_debug(f'Connecting to Slack with token ending {slack_params["token"][:-4]}')
+    log_debug(f'Connecting to Slack with token ending {slack_params["token"][-4:]}')
     try:
       self.slack_client = WebClient(token=slack_params['token'])
     except Exception as e:
