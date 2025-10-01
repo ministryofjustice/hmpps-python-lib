@@ -33,7 +33,7 @@ class GithubSession:
         sys.exit(1)
     # Github access token passed in
     elif params.get('github_access_token'):
-      self.token = params.get('github_access_token')
+      self.token = Auth.Token(params.get('github_access_token'))
     # Neither - give up
     else:
       log_error(
@@ -61,12 +61,12 @@ class GithubSession:
     log_debug('Authenticating to Github')
     try:
       self.session = Github(auth=self.token, pool_size=50)
-    except Exception as e:
+    except GithubException as e:
       log_critical(f'Unable to connect to the github API {e}')
       # Refresh the org object
     try:
       self.org = self.session.get_organization('ministryofjustice')
-    except Exception as e:
+    except GithubException as e:
       log_critical(f'Unable to get the Github organisation {e}')
 
   def get_access_token(self):
