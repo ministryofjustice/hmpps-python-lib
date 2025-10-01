@@ -3,7 +3,6 @@ from base64 import b64decode
 import json
 import yaml
 import jwt
-import re
 import sys
 from time import sleep
 from github import Auth, Github
