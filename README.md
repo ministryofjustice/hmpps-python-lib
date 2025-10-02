@@ -88,7 +88,7 @@ In fact, every time you pull down or refresh the project, it's worth running `uv
 If you're making changes to the library, here's what needs to happen for it to be available:
 
 ### New imported libraries 
-These are libraries required by scripts, which would normally be added to requirements.txt
+These are libraries required by scripts, which would normally be added to `requirements.txt`
 
 ```
 uv add LIBRARY_NAME==version.number
@@ -104,7 +104,9 @@ If a new function or component is available, please update files within the `doc
 
 ### Tagging the new version
 
-Next, it's a case of changing the `version` value in `pyproject.toml` so it matches the forthcoming tag - just for consistency.
+**Important** The `version` in `pyproject.toml` will be used as the release tag, so it's important to ensure this is updated.
+
+The standard [semver](https://semver.org/) formatting of the version should be used, without a 'v' prefix; this will be added in the Github Release.
 
 ### Validating the library on other projects
 
@@ -142,7 +144,7 @@ You can then run your script with `uv run python ...` or `source .venv/bin.activ
 
 ### Raising the PR and tagging the release
 
-Raise a PR once the library is fully validated, and once the PR has been merged, tag the release (this will soon be automatically done), and it will automatically create a release asset file that corresponds with the tag.
+Raise a PR once the library is fully validated, and once the PR has been merged, the release will be tagged automatically with the version in `pyproject.toml`.
 
 ### Refreshing the version in other repositories
 
