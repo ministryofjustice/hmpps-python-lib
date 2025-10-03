@@ -88,7 +88,7 @@ In fact, every time you pull down or refresh the project, it's worth running `uv
 If you're making changes to the library, here's what needs to happen for it to be available:
 
 ### New imported libraries 
-These are libraries required by scripts, which would normally be added to requirements.txt
+These are libraries required by scripts, which would normally be added to `requirements.txt`
 
 ```
 uv add LIBRARY_NAME==version.number
@@ -104,13 +104,51 @@ If a new function or component is available, please update files within the `doc
 
 ### Tagging the new version
 
-Next, it's a case of changing the `version` value in `pyproject.toml` so it matches the forthcoming tag - just for consistency.
+**Important** The `version` in `pyproject.toml` will be used as the release tag, so it's important to ensure this is updated.
 
-Finally, once the PR has been merged, tag the release, and it will automatically create a release asset file that corresponds with the tag.
+The standard [semver](https://semver.org/) formatting of the version should be used, without a 'v' prefix; this will be added in the Github Release.
+
+### Validating the library on other projects
+
+The library is built into a [Python Wheel](https://discuss.python.org/t/where-the-name-wheel-comes-from/6708), which is then imported into projects that use it.
+The build taks place automatically when the release is tagged, so it's available as a release asset - more about this below.
+
+To validate the updated library, it needs to be built locally, and then imported into a project for validation. Here's how:
+
+#### Install the build tools and run the build
+
+```
+uv pip install build
+uv run python -m build
+
+* Building wheel...
+Successfully built hmpps_python_lib-0.1.2.tar.gz and hmpps_python_lib-0.1.2-py3-none-any.whl
+```
+
+This should build the wheel, and it can be found in the `dist` directory.
+
+#### Install the wheel in the project you want to validate
+
+Copy the wheel to the root directory of your project and run:
+
+```
+uv remove hmpps-python-lib
+uv add hmpps-python-lib@hmpps_python_lib-0.1.2-py3-none-any.whl
+uv sync
+```
+(substituting the version of the build above for the one you're evaluating)
+
+You can confirm that the version is correct by looking in the `.venv/lib/hmpps_python_lib-xxx.dist-info` directory for the library, and opening one of the updated files - you should see your changes.
+
+You can then run your script with `uv run python ...` or `source .venv/bin.activate && python ...` and check that it works.
+
+### Raising the PR and tagging the release
+
+Raise a PR once the library is fully validated, and once the PR has been merged, the release will be tagged automatically with the version in `pyproject.toml`.
 
 ### Refreshing the version in other repositories
 
-If a tool is currently using the hmpps-python-lib library, updating is as simple as either editing the pyproject.toml file in the project's root directory
+If a tool is currently using the hmpps-python-lib library, updating is as simple as either editing the pyproject.toml file in the project's root directory:
 
 ```
 [tool.uv.sources]
