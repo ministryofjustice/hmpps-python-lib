@@ -588,3 +588,13 @@ class GithubSession:
       return False
 
     return True
+
+  def get_teams(self):
+    try:
+      self.teams = self.org.get_teams()
+      self.team_slugs = {team.slug for team in self.teams}
+      log_debug(f'Loaded list of {len(self.team_slugs)} team slugs')
+      return True
+    except Exception as e:
+      log_error(f'Unable to load github teams because: {e}')
+      return None
