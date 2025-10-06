@@ -371,7 +371,7 @@ class GithubSession:
         head=branch_name,
         base='main',
       )
-      # pr.enable_automerge('MERGE')
+      pr.enable_automerge('MERGE')
       request['request_github_pr_number'] = pr.number
       request['output_status'] = 'New'
       request['request_github_pr_status'] = 'Raised'
