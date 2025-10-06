@@ -371,7 +371,7 @@ class GithubSession:
         head=branch_name,
         base='main',
       )
-      pr.enable_automerge('MERGE')
+      # pr.enable_automerge('MERGE')
       request['request_github_pr_number'] = pr.number
       request['output_status'] = 'New'
       request['request_github_pr_status'] = 'Raised'
@@ -540,7 +540,7 @@ class GithubSession:
           f'Failed to archive repository: {response.status_code} - {response.text}'
         )
         sys.exit(1)
-        
+
   def add_repo_to_runner_group(self, repo_name, runner_group_name):
     repo = self.org.get_repo(repo_name)
     if not repo:
