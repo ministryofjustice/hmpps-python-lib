@@ -50,7 +50,7 @@ class GithubSession:
         log_critical(f'Unable to get github rate limit - {e}')
     # Bootstrap repo parameter for bootstrapping
     if github_bootstrap_repo := params.get('github_bootstrap_repo'):
-      self.bootstrap_repo = self.get_org_repo(f'{github_bootstrap_repo}')
+      self.bootstrap_repo = self.org.get_repo(f'{github_bootstrap_repo}')
       log_debug(
         f'Initialised GithubProject with bootstrap repo: {self.bootstrap_repo.name}'
       )
@@ -513,33 +513,32 @@ class GithubSession:
         sys.exit(1)
 
   def archive_repo(self, project_params):
-    if project_params['request_type'] == 'Archive':
-      # Archive repository
-      # Headers for the request
-      headers = {
-        'Authorization': f'token {self.rest_token}',
-        'Accept': 'application/vnd.github.v3+json',
-      }
+    # Archive repository
+    # Headers for the request
+    headers = {
+      'Authorization': f'token {self.rest_token}',
+      'Accept': 'application/vnd.github.v3+json',
+    }
 
-      # Data for the request
-      data = {
-        'archived': True,
-      }
+    # Data for the request
+    data = {
+      'archived': True,
+    }
 
-      # Make the request to create a new repository from a template
-      response = requests.post(
-        f'https://api.github.com/repos/{project_params["github_org"]}/{project_params["github_template_repo"]}',
-        headers=headers,
-        json=data,
+    # Make the request to create a new repository from a template
+    response = requests.post(
+      f'https://api.github.com/repos/{project_params["github_org"]}/{project_params["github_template_repo"]}',
+      headers=headers,
+      json=data,
+    )
+
+    if response.status_code == 200:
+      log_info(f'Repository {project_params["github_repo"]} archived successfully.')
+    else:
+      log_error(
+        f'Failed to archive repository: {response.status_code} - {response.text}'
       )
-
-      if response.status_code == 200:
-        log_info(f'Repository {project_params["github_repo"]} archived successfully.')
-      else:
-        log_error(
-          f'Failed to archive repository: {response.status_code} - {response.text}'
-        )
-        sys.exit(1)
+      sys.exit(1)
 
   def add_repo_to_runner_group(self, repo_name, runner_group_name):
     repo = self.org.get_repo(repo_name)
