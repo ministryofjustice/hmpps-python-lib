@@ -533,7 +533,7 @@ class GithubSession:
     )
 
     if response.status_code == 200:
-      log_info(f'Repository {project_params["github_repo"]} archived successfully.')
+      log_info(f'Repository {github_repo} archived successfully.')
     else:
       log_error(
         f'Failed to archive repository: {response.status_code} - {response.text}'
