@@ -50,7 +50,7 @@ class GithubSession:
         log_critical(f'Unable to get github rate limit - {e}')
     # Bootstrap repo parameter for bootstrapping
     if github_bootstrap_repo := params.get('github_bootstrap_repo'):
-      self.bootstrap_repo = self.org.get_repo(f'{github_bootstrap_repo}')
+      self.bootstrap_repo = self.get_org_repo(f'{github_bootstrap_repo}')
       log_debug(
         f'Initialised GithubProject with bootstrap repo: {self.bootstrap_repo.name}'
       )
