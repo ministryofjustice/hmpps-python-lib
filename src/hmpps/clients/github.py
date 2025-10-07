@@ -263,7 +263,40 @@ class GithubSession:
     return summary
 
   def create_update_pr(self, request):
-    branch_name = f'REQ_{request["id"]}_{request.get("github_repo")}'
+    if request.get('request_type') == 'Archive':
+      log_info(f'Request type Archive for repository {request.get("github_repo")}')
+      branch_name = f'REQ_ARCHIVE_{request["id"]}_{request.get("github_repo")}'
+      json_fields = [
+        'request_type',
+        'github_org',
+        'github_repo',
+        'requester_name',
+        'requester_email',
+        'requester_team',
+      ]
+    else:
+      log_info(f'Request type Add for repository {request.get("github_repo")}')
+      branch_name = f'REQ_{request["id"]}_{request.get("github_repo")}'
+      json_fields = [
+        'request_type',
+        'github_repo',
+        'repo_description',
+        'base_template',
+        'jira_project_keys',
+        'github_project_visibility',
+        'product',
+        'github_project_teams_write',
+        'github_projects_teams_admin',
+        'github_project_branch_protection_restricted_teams',
+        'prod_alerts_severity_label',
+        'nonprod_alerts_severity_label',
+        'slack_channel_nonprod_release_notify',
+        'slack_channel_prod_release_notify',
+        'slack_channel_security_scans_notify',
+        'requester_name',
+        'requester_email',
+        'requester_team',
+      ]
 
     # If the branch doesn't exist - create it
     # This will obviously create a new PR even if one already exists
@@ -278,25 +311,6 @@ class GithubSession:
     request_json_file = f'{branch_name}.json'
 
     # Populate the json file only with useful stuff
-    json_fields = [
-      'github_repo',
-      'repo_description',
-      'base_template',
-      'jira_project_keys',
-      'github_project_visibility',
-      'product',
-      'github_project_teams_write',
-      'github_projects_teams_admin',
-      'github_project_branch_protection_restricted_teams',
-      'prod_alerts_severity_label',
-      'nonprod_alerts_severity_label',
-      'slack_channel_nonprod_release_notify',
-      'slack_channel_prod_release_notify',
-      'slack_channel_security_scans_notify',
-      'requester_name',
-      'requester_email',
-      'requester_team',
-    ]
 
     request_json = {key: request.get(key) for key in json_fields if key in request}
 
@@ -498,6 +512,34 @@ class GithubSession:
         )
         sys.exit(1)
 
+  def archive_repo(self, github_org, github_repo):
+    # Archive repository
+    # Headers for the request
+    headers = {
+      'Authorization': f'token {self.rest_token}',
+      'Accept': 'application/vnd.github.v3+json',
+    }
+
+    # Data for the request
+    data = {
+      'archived': True,
+    }
+
+    # Make the request to create a new repository from a template
+    response = requests.post(
+      f'https://api.github.com/repos/{github_org}/{github_repo}',
+      headers=headers,
+      json=data,
+    )
+
+    if response.status_code == 200:
+      log_info(f'Repository {github_repo} archived successfully.')
+    else:
+      log_error(
+        f'Failed to archive repository: {response.status_code} - {response.text}'
+      )
+      sys.exit(1)
+
   def add_repo_to_runner_group(self, repo_name, runner_group_name):
     repo = self.org.get_repo(repo_name)
     if not repo:
@@ -545,3 +587,13 @@ class GithubSession:
       return False
 
     return True
+
+  def get_teams(self):
+    try:
+      self.teams = self.org.get_teams()
+      self.team_slugs = {team.slug for team in self.teams}
+      log_debug(f'Loaded list of {len(self.team_slugs)} team slugs')
+      return True
+    except Exception as e:
+      log_error(f'Unable to load github teams because: {e}')
+      return None
