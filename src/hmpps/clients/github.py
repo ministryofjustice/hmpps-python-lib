@@ -20,16 +20,13 @@ from hmpps.services.job_log_handling import (
 
 class GithubSession:
   def __init__(self, params):
+    self.private_key = None
+    self.org_name = params.get('org', 'ministryofjustice')
     # Create a session with a private key
     if params.get('app_private_key'):
       self.private_key = b64decode(params.get('app_private_key')).decode('ascii')
       self.app_id = params.get('app_id')
       self.app_installation_id = params['app_installation_id']
-      try:
-        self.token = Auth.Token(self.get_access_token())
-      except GithubException as g:
-        log_error(f'Unable to get a Github access token - {g}')
-        sys.exit(1)
     # Github access token passed in
     elif params.get('github_access_token'):
       self.token = Auth.Token(params.get('github_access_token'))
@@ -59,15 +56,25 @@ class GithubSession:
 
   def auth(self):
     log_debug('Authenticating to Github')
+    # if the authentication is with a private key, get a fresh token
+    if self.private_key:
+      try:
+        self.token = Auth.Token(self.get_access_token())
+      except GithubException as g:
+        log_critical(f'Unable to get a Github access token - {g}')
+        sys.exit(1)
+    # Then initiate a session with the token
     try:
       self.session = Github(auth=self.token, pool_size=50)
     except GithubException as e:
-      log_critical(f'Unable to connect to the github API {e}')
+      log_critical(f'Unable to authenticate to the github API {e}')
+      sys.exit(1)
       # Refresh the org object
     try:
-      self.org = self.session.get_organization('ministryofjustice')
+      self.org = self.session.get_organization(self.org_name)
     except GithubException as e:
-      log_critical(f'Unable to get the Github organisation {e}')
+      log_critical(f'Unable to get the Github organisation {self.org_name} - {e}')
+      sys.exit(1)
 
   def get_access_token(self):
     log_debug('Using private key to get access token')
