@@ -512,7 +512,7 @@ class GithubSession:
         )
         sys.exit(1)
 
-  def archive_repo(self, project_params):
+  def archive_repo(self, github_org, github_repo):
     # Archive repository
     # Headers for the request
     headers = {
@@ -527,7 +527,7 @@ class GithubSession:
 
     # Make the request to create a new repository from a template
     response = requests.post(
-      f'https://api.github.com/repos/{project_params["github_org"]}/{project_params["github_template_repo"]}',
+      f'https://api.github.com/repos/{github_org}/{github_repo}',
       headers=headers,
       json=data,
     )
