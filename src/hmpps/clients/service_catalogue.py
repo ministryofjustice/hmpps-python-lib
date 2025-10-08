@@ -174,9 +174,9 @@ class ServiceCatalogue:
 
   def get_record(self, table, label, parameter):
     if '?' in table:  # add an extra parameter if there are already parameters
-      filter = f'&filters[{label}][$eq]={parameter}'
+      filter = f'&filters[{label}][$eq]={parameter.replace("&", "&amp;")}'
     else:
-      filter = f'?filters[{label}][$eq]={parameter}'
+      filter = f'?filters[{label}][$eq]={parameter.replace("&", "&amp;")}'
     if json_data := self.get_with_retry(f'{table}{filter}'):
       return json_data[0]
     else:
@@ -186,8 +186,30 @@ class ServiceCatalogue:
   Update a record in the Service Catalogue with passed-in JSON data
   """
 
+  def get_filtered_records(self, match_table, match_field, match_string):
+    try:
+      r = requests.get(
+        f'{self.url}/v1/{match_table}?filters[{match_field}][$eq]={match_string.replace("&", "&amp;")}',
+        headers=self.api_headers,
+        timeout=10,
+      )
+      if r.status_code == 200 and r.json()['data']:
+        sc_id = r.json()['data'][0]['id']
+        log_debug(
+          f'Successfully found Service Catalogue ID for {match_field}={match_string} in {match_table}: {sc_id}'
+        )
+        return r.json()['data']
+      log_warning(
+        f'Could not find Service Catalogue ID for {match_field}={match_string} in {match_table}'
+      )
+      return None
+    except Exception as e:
+      log_error(
+        f'Error getting Service Catalogue ID for {match_field}={match_string} in {match_table}: {e} - {r.status_code} {r.content}'
+      )
+      return None
+
   def update(self, table, element_id, data):
-    success = False
     try:
       log_debug(f'data to be uploaded: {json.dumps(data, indent=2)}')
       x = requests.put(
@@ -200,19 +222,19 @@ class ServiceCatalogue:
         log_info(
           f'Successfully updated record {element_id} in {table.split("/")[-1]}: {x.status_code}'
         )
-        success = True
       else:
         log_error(
           f'Received non-200 response from service catalogue for record id {element_id} in {table.split("/")[-1]}: {x.status_code} {x.content}'
         )
+        return False
     except Exception as e:
       log_error(
         f'Error updating service catalogue for record id {element_id} in {table.split("/")[-1]}: {e}'
       )
-    return success
+      return False
+    return True
 
   def add(self, table, data):
-    success = False
     try:
       log_debug(data)
       x = requests.post(
@@ -225,19 +247,19 @@ class ServiceCatalogue:
         log_info(
           f'Successfully added {(data["team_name"] if "team_name" in data else data["name"])} to {table.split("/")[-1]}: {x.status_code}'
         )
-        success = True
       else:
         log_error(
           f'Received non-201 response from service catalogue to add a record to {table.split("/")[-1]}: {x.status_code} {x.content}'
         )
+        return False
     except Exception as e:
       log_error(
         f'Error adding a record to {table.split("/")[-1]} in service catalogue: {e}'
       )
-    return success
+      return False
+    return True
 
   def delete(self, table, element_id):
-    success = False
     try:
       log_debug(f'Deleting record {element_id} from {table.split("/")[-1]}')
       x = requests.delete(
@@ -249,16 +271,43 @@ class ServiceCatalogue:
         log_info(
           f'Successfully deleted record {element_id} from {table.split("/")[-1]}: {x.status_code}'
         )
-        success = True
       else:
         log_error(
           f'Received non-2xx response from service catalogue deleting record id {element_id} in {table.split("/")[-1]}: {x.status_code} {x.content}'
         )
+        return False
     except Exception as e:
       log_error(
         f'Error deleting record {element_id} from {table.split("/")[-1]} in service catalogue: {e}'
       )
-    return success
+      return False
+    return True
+
+  def unpublish(self, table, element_id):
+    try:
+      # log_debug(f'data to be unpublished: {json.dumps(data, indent=2)}')
+      data = {'publishedAt': None}
+      x = requests.put(
+        f'{self.url}/v1/{table}/{element_id}',
+        headers=self.api_headers,
+        json={'data': data},
+        timeout=10,
+      )
+      if x.status_code == 200:
+        log_info(
+          f'Successfully unpublished record {element_id} in {table.split("/")[-1]}: {x.status_code}'
+        )
+      else:
+        log_info(
+          f'Received non-200 response from service catalogue for record id {element_id} in {table.split("/")[-1]}: {x.status_code} {x.content}'
+        )
+        return False
+    except Exception as e:
+      log_error(
+        f'Error updating service catalogue for record id {element_id} in {table.split("/")[-1]}: {e}'
+      )
+      return False
+    return True
 
   # eg get_id('github-teams', 'team_name', 'example')
   def get_id(self, match_table, match_field, match_string):
@@ -275,6 +324,7 @@ class ServiceCatalogue:
         log_warning(
           f'Could not find Service Catalogue documentID for {match_field}={match_string} in {match_table}'
         )
+        return None
 
   def get_component_env_id(self, component, env):
     env_id = None
@@ -312,7 +362,7 @@ class ServiceCatalogue:
     try:
       job_id = sc_scheduled_jobs_data.get('documentId')
       self.update(self.scheduled_jobs, job_id, job_data)
-      return True
     except Exception as e:
       log_error(f'Job {job.name} not found in Service Catalogue - {e}')
       return False
+    return True
