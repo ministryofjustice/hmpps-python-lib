@@ -257,7 +257,7 @@ class ServiceCatalogue:
         f'Error adding a record to {table.split("/")[-1]} in service catalogue: {e}'
       )
       return False
-    return True
+    return x.json()
 
   def delete(self, table, element_id):
     try:
