@@ -27,7 +27,8 @@ class HealthServer:
     )
     # Get version and productId from environment variables
     self.version = os.getenv('APP_VERSION', 'dev')
-    self.product_id = os.getenv('PRODUCT_ID', 'none')
+    self.environment = os.getenv('ENVIRONMENT', None)
+    self.product_id = os.getenv('PRODUCT_ID', None)
 
     # Initiate the start_time variable
     self.app_start_time = None
@@ -62,9 +63,12 @@ class HealthServer:
 
       info_data = {
         'build': {'version': self.version, 'name': self.host_name},
-        'productId': self.product_id,
         'uptime': uptime_seconds,
       }
+      if self.environment:
+        info_data['environment'] = self.environment
+      if self.product_id:
+        info_data['productId'] = self.product_id
 
       return jsonify(info_data)
 
