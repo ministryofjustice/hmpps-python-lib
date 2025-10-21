@@ -20,7 +20,11 @@ class HealthServer:
     # Create Flask app for health checks
     self.health_app = Flask(__name__)
     self.add_routes()
-    self.host_name = '-'.join(socket.gethostname().split('-')[:-2])
+    self.host_name = (
+      '-'.join(socket.gethostname().split('-')[:-2])
+      if len(socket.gethostname().split('-')) > 2
+      else socket.gethostname()
+    )
     # Get version and productId from environment variables
     self.version = os.getenv('APP_VERSION', 'dev')
     self.product_id = os.getenv('PRODUCT_ID', 'none')
