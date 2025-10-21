@@ -3,6 +3,7 @@ import time
 import os
 import logging
 import threading
+import socket
 
 
 def setup_logging(level: str = 'INFO') -> None:
@@ -19,7 +20,7 @@ class HealthServer:
     # Create Flask app for health checks
     self.health_app = Flask(__name__)
     self.add_routes()
-
+    self.host_name = '-'.join(socket.gethostname().split('-')[:-2])
     # Get version and productId from environment variables
     self.version = os.getenv('APP_VERSION', 'dev')
     self.product_id = os.getenv('PRODUCT_ID', 'none')
@@ -32,14 +33,15 @@ class HealthServer:
     setup_logging(log_level)
 
     self.logger = logging.getLogger(__name__)
-    self.logger.info('Starting HMPPS health ping health app')
+
+    self.logger.info(f'Starting {self.host_name} health app')
 
   def add_routes(self):
     @self.health_app.route('/health')
     def health_check():
       health_data = {
         'status': 'UP',
-        'service': 'hmpps-health-ping',
+        'service': self.host_name,
       }
 
       # Return appropriate HTTP status code
@@ -55,7 +57,7 @@ class HealthServer:
       )
 
       info_data = {
-        'build': {'version': self.version, 'name': 'hmpps-healthping'},
+        'build': {'version': self.version, 'name': self.host_name},
         'productId': self.product_id,
         'uptime': uptime_seconds,
       }

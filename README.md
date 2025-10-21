@@ -110,35 +110,13 @@ The standard [semver](https://semver.org/) formatting of the version should be u
 
 ### Validating the library on other projects
 
-The library is built into a [Python Wheel](https://discuss.python.org/t/where-the-name-wheel-comes-from/6708), which is then imported into projects that use it.
-The build taks place automatically when the release is tagged, so it's available as a release asset - more about this below.
-
-To validate the updated library, it needs to be built locally, and then imported into a project for validation. Here's how:
-
-#### Install the build tools and run the build
-
-```
-uv pip install build
-uv run python -m build
-
-* Building wheel...
-Successfully built hmpps_python_lib-0.1.2.tar.gz and hmpps_python_lib-0.1.2-py3-none-any.whl
-```
-
-This should build the wheel, and it can be found in the `dist` directory.
-
-#### Install the wheel in the project you want to validate
-
-Copy the wheel to the root directory of your project and run:
+It's possible to import a version of the library from an active Github branch, so that it can be validated. 
 
 ```
 uv remove hmpps-python-lib
-uv add hmpps-python-lib@hmpps_python_lib-0.1.2-py3-none-any.whl
+uv add "hmpps-python-lib @ git+https://github.com/ministryofjustice/hmpps-python-lib.git@feat/HEAT-xxx_your_branch"
 uv sync
 ```
-(substituting the version of the build above for the one you're evaluating)
-
-You can confirm that the version is correct by looking in the `.venv/lib/hmpps_python_lib-xxx.dist-info` directory for the library, and opening one of the updated files - you should see your changes.
 
 You can then run your script with `uv run python ...` or `source .venv/bin.activate && python ...` and check that it works.
 
@@ -146,19 +124,24 @@ You can then run your script with `uv run python ...` or `source .venv/bin.activ
 
 Raise a PR once the library is fully validated, and once the PR has been merged, the release will be tagged automatically with the version in `pyproject.toml`.
 
+The library is then built into a [Python Wheel](https://discuss.python.org/t/where-the-name-wheel-comes-from/6708), and saved as a release asset.
+
+![Release Assets](docs/pics/release-assets.png)
+
 ### Refreshing the version in other repositories
 
 If a tool is currently using the hmpps-python-lib library, updating is as simple as either editing the pyproject.toml file in the project's root directory:
 
+(taking version 0.1.5 as an example by right-clicking the link in the Release Assets and selecting **Copy Link Address**) 
 ```
 [tool.uv.sources]
-hmpps-python-lib = { url = "https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl" }
+hmpps-python-lib = { url = "https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.1.5/hmpps_python_lib-0.1.5-py3-none-any.whl" }
 ```
 
 or you can do:
 ```
 uv remove hmpps-python-lib
-uv add https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.0.2/hmpps_python_lib-0.0.2-py3-none-any.whl
+uv add https://github.com/ministryofjustice/hmpps-python-lib/releases/download/v0.1.5/hmpps_python_lib-0.1.5-py3-none-any.whl
 ```
 
 
