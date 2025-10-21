@@ -77,6 +77,10 @@ class HealthServer:
       """Simple ping endpoint for Kubernetes liveness and readiness probes."""
       return 'pong', 200
 
+    @self.health_app.errorhandler(404)
+    def page_not_found(e):
+      return 'Not found.', 404
+
   def start_health_server(self, port: int = 8080):
     # Store application start time for uptime calculation
     self.app_start_time = time.time()
