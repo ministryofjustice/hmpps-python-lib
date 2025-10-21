@@ -1,6 +1,6 @@
 [project]
 name = "hmpps-python-lib"           # distribution name (keeps hyphens)
-version = "0.1.5"
+version = "0.1.6"
 description = "HMPPS shared Python library"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -10,6 +10,7 @@ dependencies = [
   "PyYAML==6.0.1",
   "requests>=2.32.5",
   "slack-sdk>=3.36.0",
+  "flask>=3.1.2",
 ]
 
 [build-system]
