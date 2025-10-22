@@ -120,6 +120,12 @@ uv sync
 
 You can then run your script with `uv run python ...` or `source .venv/bin.activate && python ...` and check that it works.
 
+If you want to validate the library on a deployed version, you'll need to add `git` to the installed packages in Dockerfile, eg:
+```
+# add the necessary libraries
+RUN apk add --no-cache gcc python3-dev musl-dev linux-headers git ca-certificates && update-ca-certificates
+```
+
 ### Raising the PR and tagging the release
 
 Raise a PR once the library is fully validated, and once the PR has been merged, the release will be tagged automatically with the version in `pyproject.toml`.
