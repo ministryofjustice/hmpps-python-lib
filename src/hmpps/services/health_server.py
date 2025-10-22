@@ -19,7 +19,6 @@ class HealthServer:
   def __init__(self):
     # Create Flask app for health checks
     self.health_app = Flask(__name__)
-    self.add_routes()
     self.host_name = (
       '-'.join(socket.gethostname().split('-')[:-2])
       if len(socket.gethostname().split('-')) > 2
@@ -38,8 +37,7 @@ class HealthServer:
     setup_logging(log_level)
 
     self.logger = logging.getLogger(__name__)
-
-    self.logger.info(f'Starting {self.host_name} health app')
+    self.add_routes()
 
   # Routes are linked to below
   def add_routes(self):
@@ -85,6 +83,7 @@ class HealthServer:
 
   def start_health_server(self, port: int = 8080):
     # Store application start time for uptime calculation
+    self.logger.info(f'Starting {self.host_name} health app')
     self.app_start_time = time.time()
     """Start the Flask health check server in a separate thread."""
     try:
