@@ -19,7 +19,6 @@ class HealthServer:
   def __init__(self):
     # Create Flask app for health checks
     self.health_app = Flask(__name__)
-    self.add_routes()
     self.host_name = (
       '-'.join(socket.gethostname().split('-')[:-2])
       if len(socket.gethostname().split('-')) > 2
@@ -38,51 +37,53 @@ class HealthServer:
     setup_logging(log_level)
 
     self.logger = logging.getLogger(__name__)
+    self.add_routes()
 
-    self.logger.info(f'Starting {self.host_name} health app')
-
+  # Routes are linked to below
   def add_routes(self):
-    @self.health_app.route('/health')
-    def health_check():
-      health_data = {
-        'status': 'UP',
-        'service': self.host_name,
-      }
-
-      # Return appropriate HTTP status code
-      status_code = 200 if health_data['status'] == 'UP' else 503
-      return jsonify(health_data), status_code
-
-    @self.health_app.route('/info')
-    def info():
-      """Application info endpoint."""
-      current_time = time.time()
-      uptime_seconds = (
-        int(current_time - self.app_start_time) if self.app_start_time else 0
-      )
-
-      info_data = {
-        'build': {'version': self.version, 'name': self.host_name},
-        'uptime': uptime_seconds,
-      }
-      if self.environment:
-        info_data['environment'] = self.environment
-      if self.product_id:
-        info_data['productId'] = self.product_id
-
-      return jsonify(info_data)
-
-    @self.health_app.route('/ping')
-    def ping():
-      """Simple ping endpoint for Kubernetes liveness and readiness probes."""
-      return 'pong', 200
+    self.health_app.route('/health')(self._health_check)
+    self.health_app.route('/info')(self._info)
+    self.health_app.route('/ping')(self._ping)
 
     @self.health_app.errorhandler(404)
     def page_not_found(e):
       return 'Not found.', 404
 
+  def _health_check(self):
+    health_data = {
+      'status': 'UP',
+      'service': self.host_name,
+    }
+
+    # Return appropriate HTTP status code
+    status_code = 200 if health_data['status'] == 'UP' else 503
+    return jsonify(health_data), status_code
+
+  def _info(self):
+    """Application info endpoint."""
+    current_time = time.time()
+    uptime_seconds = (
+      int(current_time - self.app_start_time) if self.app_start_time else 0
+    )
+
+    info_data = {
+      'build': {'version': self.version, 'name': self.host_name},
+      'uptime': uptime_seconds,
+    }
+    if self.environment:
+      info_data['environment'] = self.environment
+    if self.product_id:
+      info_data['productId'] = self.product_id
+
+    return jsonify(info_data)
+
+  def _ping(self):
+    """Simple ping endpoint for Kubernetes liveness and readiness probes."""
+    return 'pong', 200
+
   def start_health_server(self, port: int = 8080):
     # Store application start time for uptime calculation
+    self.logger.info(f'Starting {self.host_name} health app')
     self.app_start_time = time.time()
     """Start the Flask health check server in a separate thread."""
     try:
