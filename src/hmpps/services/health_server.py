@@ -87,8 +87,8 @@ class HealthServer:
     self.app_start_time = time.time()
     """Start the Flask health check server in a separate thread."""
     try:
-      # Disable Flask's default logging to avoid cluttering our logs
-      logging.getLogger('werkzeug').setLevel(logging.WARNING)
+      # Encourage Flask only to log INFO logging to avoid cluttering our logs
+      logging.getLogger('werkzeug').setLevel(logging.INFO)
 
       self.logger.info('Health check server starting on port %d', port)
       self.health_app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
