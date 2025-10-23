@@ -79,7 +79,6 @@ class HealthServer:
 
   def _ping(self):
     """Simple ping endpoint for Kubernetes liveness and readiness probes."""
-    self.logger.info('/ping - returning 200')
     return 'pong', 200
 
   def start_health_server(self, port: int = 8080):
@@ -88,7 +87,7 @@ class HealthServer:
     self.app_start_time = time.time()
     """Start the Flask health check server in a separate thread."""
     try:
-      # Disable Flask's default logging to avoid cluttering our logs
+      # Encourage Flask only to log INFO logging to avoid cluttering our logs
       logging.getLogger('werkzeug').setLevel(logging.INFO)
 
       self.logger.info('Health check server starting on port %d', port)
