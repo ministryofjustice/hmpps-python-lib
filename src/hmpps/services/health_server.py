@@ -41,7 +41,7 @@ class HealthServer:
 
   # Routes are linked to below
   def add_routes(self):
-    self.health_app.route('/health')(self._health_check)
+    self.health_app.route('/health')(self._health)
     self.health_app.route('/info')(self._info)
     self.health_app.route('/ping')(self._ping)
 
@@ -49,7 +49,7 @@ class HealthServer:
     def page_not_found(e):
       return 'Not found.', 404
 
-  def _health_check(self):
+  def _health(self):
     health_data = {
       'status': 'UP',
       'service': self.host_name,
