@@ -4,9 +4,7 @@
 import json
 from dataclasses import dataclass, field
 from typing import Optional
-from hmpps.services.job_log_handling import (
-  log_error,
-)
+from hmpps.services.job_log_handling import log_warning
 
 
 class RepositoryInfoFactory:
@@ -48,30 +46,34 @@ class RepositoryInfoFactory:
 
     try:
       default_branch_protection = repo.get_branch(repo.default_branch).get_protection()
-      pr = (
-        default_branch_protection.required_pull_request_reviews
-        if default_branch_protection
-        else None
-      )
-      default_branch_protection = BranchProtectionInfo(
-        enabled=getattr(default_branch_protection, 'enabled', False),
-        allow_force_pushes=getattr(
-          default_branch_protection, 'allow_force_pushes', False
-        ),
-        enforce_admins=getattr(default_branch_protection, 'enforce_admins', False),
-        required_signatures=getattr(
-          default_branch_protection, 'required_signatures', False
-        ),
-        dismiss_stale_reviews=getattr(pr, 'dismiss_stale_reviews', False),
-        require_code_owner_reviews=getattr(pr, 'require_code_owner_reviews', False),
-        require_last_push_approval=getattr(pr, 'require_last_push_approval', False),
-        required_approving_review_count=getattr(
-          pr, 'required_approving_review_count', 0
-        ),
-      )
     except Exception as e:
       default_branch_protection = None
-      log_error(f'Error getting default branch protection: {e}')
+      log_warning(f'Unable to get default branch protection: {e}')
+    if default_branch_protection:
+      try:
+        pr = (
+          default_branch_protection.required_pull_request_reviews
+          if default_branch_protection
+          else None
+        )
+        default_branch_protection = BranchProtectionInfo(
+          enabled=getattr(default_branch_protection, 'enabled', False),
+          allow_force_pushes=getattr(
+            default_branch_protection, 'allow_force_pushes', False
+          ),
+          enforce_admins=getattr(default_branch_protection, 'enforce_admins', False),
+          required_signatures=getattr(
+            default_branch_protection, 'required_signatures', False
+          ),
+          dismiss_stale_reviews=getattr(pr, 'dismiss_stale_reviews', False),
+          require_code_owner_reviews=getattr(pr, 'require_code_owner_reviews', False),
+          require_last_push_approval=getattr(pr, 'require_last_push_approval', False),
+          required_approving_review_count=getattr(
+            pr, 'required_approving_review_count', 0
+          ),
+        )
+      except Exception as e:
+        log_warning(f'Failed to get branch protection attribute: {e}')
 
     return RepositoryInfo(
       basic=basic_info,
