@@ -57,6 +57,7 @@ class ServiceCatalogue:
 
     self.products = 'products'
     self.products_get = f'{self.products}?populate[parent]=true&populate[children]=true&populate[product_set]=true&populate[service_area]=true&populate[team]=true{self.product_filter}{pagination_page_size}{sort_filter}'
+    self.sharepoint_discovery_products_get = f'{self.products}?populate[parent]=true&populate[children]=true&populate[product_set]=true&populate[service_area]=true&populate[team]=true{pagination_page_size}{sort_filter}'
 
     self.github_teams = 'github-teams'
     self.environments = 'environments'

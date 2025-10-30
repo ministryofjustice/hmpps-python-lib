@@ -8,3 +8,4 @@
 0.1.5 - add extra Service Catalogue functions to enable migration of Trivy scans
 0.1.6 - add an additional Flask health monitor class (HEAT-962) 
 0.1.7 - patch fix for repository info to be more tolerant of branch protection not being present
+0.1.8 - Added sharepoint_discovery_products_get in service_catalogue without filter part
