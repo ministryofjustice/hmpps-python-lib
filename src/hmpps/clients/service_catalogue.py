@@ -272,7 +272,7 @@ class ServiceCatalogue:
 
   def add(self, table, data):
     try:
-      log_debug(data)
+      log_debug(f'Data to be added: {json.dumps(data, indent=2)}')
       x = requests.post(
         f'{self.url}/v1/{table}',
         headers=self.api_headers,
