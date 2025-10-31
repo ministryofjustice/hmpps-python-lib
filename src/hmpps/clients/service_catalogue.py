@@ -159,6 +159,31 @@ class ServiceCatalogue:
 
     return json_data
 
+  # Get a single record (no pagination)
+  def get_single_record_with_retry(
+    self,
+    uri: str,
+    max_retries: int = 3,
+    timeout: int = 10,
+  ) -> Dict[str, Any]:
+    """
+    Fetch all pages for the given `uri`, aggregating the `field` array from each page.
+    - Retries each page up to `max_retries` times with exponential backoff.
+    - Preserves any existing query params on `uri`.
+    """
+    base_url = f'{self.url.rstrip("/")}/v1/{uri.lstrip("/")}'
+    json_data: Dict[str, Any] = {}
+    try:
+      response_data = self._request_json_with_retry(base_url, max_retries, timeout)
+      data_obj = response_data.get('data')
+      if isinstance(data_obj, dict):
+        json_data = data_obj
+      else:
+        log_warning(f'Unexpected data format for single record: {type(data_obj)}')
+    except Exception as e:
+      log_error(f'Failed to get data from Service Catalogue: {e}')
+    return json_data
+
   """
   Get all multipage results from Service Catalogue
   """
@@ -209,6 +234,16 @@ class ServiceCatalogue:
         f'Error getting Service Catalogue ID for {match_field}={match_string} in {match_table}: {e} - {r.status_code} {r.content}'
       )
       return None
+
+  """
+  Get a single record by id from the Service Catalogue
+  """
+
+  def get_record_by_id(self, table, id):
+    if json_data := self.get_single_record_with_retry(f'{table}/{id}'):
+      return json_data
+    else:
+      return {}
 
   def update(self, table, element_id, data):
     try:
